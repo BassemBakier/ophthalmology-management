@@ -1,0 +1,32 @@
+{
+  "name": "ophthalmology-management",
+  "version": "1.0.0",
+  "description": "نظام إدارة مرضى طب العيون - Ophthalmology Patient Management System",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx live-server --port=3000 --open=/index.html",
+    "start": "npx live-server --port=3000 --open=/index.html",
+    "build": "echo 'Building project...'",
+    "deploy": "echo 'Deploy to Supabase...'"
+  },
+  "keywords": [
+    "ophthalmology",
+    "medical",
+    "patient-management",
+    "supabase",
+    "arabic"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ophthalmology-management.git"
+  },
+  "homepage": "https://github.com/yourusername/ophthalmology-management#readme"
+}
