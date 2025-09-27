@@ -1,17 +1,30 @@
-// نظام إدارة مرضى طب العيون مع Supabase
-// Ophthalmology Patient Management System with Supabase
+// نظام إدارة مرضى طب العيون مع Supabase - نسخة كاملة مع إدارة الأدوية
+// Ophthalmology Patient Management System with Supabase - Complete with Medications Management
 
-// إعداد Supabase - تم تحديث القيم
+// إعداد Supabase - تم تحديث القيم مع إعدادات CORS محسنة
 const SUPABASE_URL = 'https://ogjpsyoewaoghppmuhcd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nanBzeW9ld2FvZ2hwcG11aGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5OTE2ODcsImV4cCI6MjA3NDU2NzY4N30.UdF6Mluzkf01XfhnvGp0Gec3VwGP8HZAukMNjka61jw';
 
-// إنشاء عميل Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// إنشاء عميل Supabase مع إعدادات محسنة
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false
+    },
+    global: {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    }
+});
 
 // متغيرات عامة
 let patients = [];
 let medications = [];
 let currentPatientId = 1;
+let editingMedicationId = null;
 
 // تهيئة التطبيق
 document.addEventListener('DOMContentLoaded', async function() {
@@ -22,19 +35,44 @@ document.addEventListener('DOMContentLoaded', async function() {
 // تهيئة التطبيق
 async function initializeApp() {
     try {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('visit-date').value = today;
-    
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('visit-date').value = today;
+        
         updateConnectionStatus('connecting');
+        
+        // اختبار الاتصال أولاً
+        await testConnection();
+        
         await loadPatientsFromSupabase();
         await loadMedicationsFromSupabase();
-    updatePatientsTable();
+        updatePatientsTable();
+        renderMedications();
         updateConnectionStatus('connected');
         showAlert('تم تحميل البيانات بنجاح!', 'success');
     } catch (error) {
         console.error('خطأ في تهيئة التطبيق:', error);
         updateConnectionStatus('error');
-        showAlert('خطأ في تحميل البيانات من الخادم', 'error');
+        showAlert('خطأ في الاتصال بقاعدة البيانات - تحقق من إعدادات CORS', 'error');
+    }
+}
+
+// اختبار الاتصال
+async function testConnection() {
+    try {
+        const { data, error } = await supabase
+            .from('patients')
+            .select('count', { count: 'exact', head: true });
+        
+        if (error) {
+            console.error('خطأ في الاتصال:', error);
+            throw error;
+        }
+        
+        console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
+        return true;
+    } catch (error) {
+        console.error('❌ فشل في الاتصال:', error);
+        throw error;
     }
 }
 
@@ -72,11 +110,21 @@ function setupEventListeners() {
     document.getElementById('search-btn').addEventListener('click', searchPatientsHandler);
     document.getElementById('clear-search-btn').addEventListener('click', clearSearch);
 
+    // أحداث الأدوية
+    document.getElementById('medication-form').addEventListener('submit', handleMedicationSubmit);
+    document.getElementById('medication-form').addEventListener('reset', handleMedicationFormReset);
+
     document.querySelector('.close').addEventListener('click', closeModal);
+    document.querySelector('#medication-modal .close').addEventListener('click', closeMedicationModal);
+    
     window.addEventListener('click', function(event) {
         const modal = document.getElementById('patient-modal');
+        const medicationModal = document.getElementById('medication-modal');
         if (event.target === modal) {
             closeModal();
+        }
+        if (event.target === medicationModal) {
+            closeMedicationModal();
         }
     });
 
@@ -84,6 +132,10 @@ function setupEventListeners() {
     document.getElementById('search-diagnosis').addEventListener('input', debounce(searchPatientsHandler, 300));
     document.getElementById('search-date').addEventListener('change', searchPatientsHandler);
 }
+
+// ============================================================================
+// إدارة المرضى
+// ============================================================================
 
 // تحميل المرضى من Supabase
 async function loadPatientsFromSupabase() {
@@ -93,7 +145,10 @@ async function loadPatientsFromSupabase() {
             .select('*')
             .order('created_at', { ascending: false });
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في تحميل المرضى:', error);
+            throw error;
+        }
         
         patients = data || [];
         if (patients.length > 0) {
@@ -103,7 +158,7 @@ async function loadPatientsFromSupabase() {
         generatePatientId();
     } catch (error) {
         console.error('خطأ في تحميل المرضى:', error);
-        showAlert('خطأ في تحميل بيانات المرضى', 'error');
+        showAlert('خطأ في تحميل بيانات المرضى - تحقق من إعدادات CORS', 'error');
     }
 }
 
@@ -115,10 +170,14 @@ async function loadMedicationsFromSupabase() {
             .select('*')
             .order('name');
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في تحميل الأدوية:', error);
+            throw error;
+        }
         
         medications = data || [];
         updateMedicationSelect();
+        renderMedications();
     } catch (error) {
         console.error('خطأ في تحميل الأدوية:', error);
     }
@@ -183,7 +242,7 @@ async function handlePatientSubmit(e) {
         operation: formData.get('operation'),
         
         examination_cost: parseFloat(formData.get('examinationCost')) || 0,
-            discount: parseFloat(formData.get('discount')) || 0,
+        discount: parseFloat(formData.get('discount')) || 0,
         notes: formData.get('notes')
     };
 
@@ -197,21 +256,24 @@ async function handlePatientSubmit(e) {
             .insert([patientData])
             .select();
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في حفظ المريض:', error);
+            throw error;
+        }
         
         showAlert('تم حفظ بيانات المريض بنجاح!', 'success');
         
-    e.target.reset();
+        e.target.reset();
         currentPatientId++;
-    generatePatientId();
-    
+        generatePatientId();
+        
         await loadPatientsFromSupabase();
         updatePatientsTable();
         
-    switchTab('patients-list');
+        switchTab('patients-list');
     } catch (error) {
         console.error('خطأ في حفظ المريض:', error);
-        showAlert('خطأ في حفظ بيانات المريض', 'error');
+        showAlert('خطأ في حفظ بيانات المريض - تحقق من إعدادات CORS', 'error');
     }
 }
 
@@ -278,12 +340,15 @@ async function searchPatientsHandler() {
         
         const { data, error } = await query.order('created_at', { ascending: false });
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في البحث:', error);
+            throw error;
+        }
         
         displaySearchResults(data);
     } catch (error) {
         console.error('خطأ في البحث:', error);
-        showAlert('خطأ في البحث', 'error');
+        showAlert('خطأ في البحث - تحقق من إعدادات CORS', 'error');
     }
 }
 
@@ -296,17 +361,217 @@ async function deletePatientHandler(patientId) {
                 .delete()
                 .eq('id', patientId);
             
-            if (error) throw error;
+            if (error) {
+                console.error('خطأ في حذف المريض:', error);
+                throw error;
+            }
             
             showAlert('تم حذف بيانات المريض بنجاح!', 'success');
             await loadPatientsFromSupabase();
-        updatePatientsTable();
+            updatePatientsTable();
         } catch (error) {
             console.error('خطأ في حذف المريض:', error);
-            showAlert('خطأ في حذف المريض', 'error');
+            showAlert('خطأ في حذف المريض - تحقق من إعدادات CORS', 'error');
+        }
     }
 }
+
+// ============================================================================
+// إدارة الأدوية - وظائف كاملة
+// ============================================================================
+
+// فتح نافذة إضافة/تعديل دواء
+function openMedicationModal(medicationId = null) {
+    const modal = document.getElementById('medication-modal');
+    const title = document.getElementById('medication-modal-title');
+    const form = document.getElementById('medication-form');
+
+    form.reset();
+    editingMedicationId = medicationId;
+
+    if (medicationId) {
+        title.textContent = 'تعديل دواء';
+        const medication = medications.find(m => m.id === medicationId);
+        if (medication) {
+            document.getElementById('medication-name').value = medication.name;
+            document.getElementById('medication-type').value = medication.type;
+            document.getElementById('medication-description').value = medication.description || '';
+            document.getElementById('medication-notes').value = medication.notes || '';
+        }
+    } else {
+        title.textContent = 'إضافة دواء جديد';
+    }
+    modal.style.display = 'block';
 }
+
+// إغلاق نافذة إضافة/تعديل دواء
+function closeMedicationModal() {
+    document.getElementById('medication-modal').style.display = 'none';
+    editingMedicationId = null;
+    document.getElementById('medication-form').reset();
+}
+
+// معالجة إرسال نموذج الدواء
+async function handleMedicationSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const medicationData = {
+        name: formData.get('name').trim(),
+        type: formData.get('type'),
+        description: formData.get('description').trim(),
+        notes: formData.get('notes').trim()
+    };
+
+    // التحقق من صحة البيانات
+    if (!medicationData.name || medicationData.name.length < 2) {
+        showAlert('يرجى إدخال اسم الدواء بشكل صحيح', 'error');
+        return;
+    }
+
+    if (!medicationData.type) {
+        showAlert('يرجى اختيار نوع الدواء', 'error');
+        return;
+    }
+
+    try {
+        if (editingMedicationId) {
+            // تعديل دواء موجود
+            const { data, error } = await supabase
+                .from('medications')
+                .update(medicationData)
+                .eq('id', editingMedicationId)
+                .select();
+
+            if (error) {
+                console.error('خطأ في تحديث الدواء:', error);
+                throw error;
+            }
+            showAlert('تم تحديث الدواء بنجاح!', 'success');
+        } else {
+            // إضافة دواء جديد
+            const { data, error } = await supabase
+                .from('medications')
+                .insert([medicationData])
+                .select();
+
+            if (error) {
+                console.error('خطأ في إضافة الدواء:', error);
+                throw error;
+            }
+            showAlert('تم إضافة الدواء بنجاح!', 'success');
+        }
+
+        closeMedicationModal();
+        await loadMedicationsFromSupabase();
+        
+    } catch (error) {
+        console.error('خطأ في حفظ الدواء:', error);
+        if (error.message.includes('duplicate key')) {
+            showAlert('اسم الدواء موجود بالفعل!', 'error');
+        } else {
+            showAlert('خطأ في حفظ الدواء - تحقق من إعدادات CORS', 'error');
+        }
+    }
+}
+
+// معالجة إعادة تعيين نموذج الدواء
+function handleMedicationFormReset() {
+    editingMedicationId = null;
+    document.getElementById('medication-modal-title').textContent = 'إضافة دواء جديد';
+}
+
+// عرض الأدوية في قائمة الإدارة
+function renderMedications() {
+    const medicationsListDiv = document.getElementById('medications-list');
+    medicationsListDiv.innerHTML = '';
+
+    if (medications.length === 0) {
+        medicationsListDiv.innerHTML = `
+            <div class="no-results">
+                <i class="fas fa-pills" style="font-size: 3rem; color: #bdc3c7; margin-bottom: 20px;"></i>
+                <h3>لا توجد أدوية مسجلة</h3>
+                <p>اضغط على "إضافة دواء جديد" لإضافة دواء</p>
+            </div>
+        `;
+        return;
+    }
+
+    medications.forEach(med => {
+        const card = document.createElement('div');
+        card.className = 'medication-card';
+        card.innerHTML = `
+            <div class="medication-card-header">
+                <h4 class="medication-name">${med.name}</h4>
+                <span class="medication-type">${getMedicationTypeLabel(med.type)}</span>
+            </div>
+            <p class="medication-description">${truncateText(med.description || 'لا يوجد وصف', 100)}</p>
+            <p class="medication-notes">${truncateText(med.notes || 'لا توجد ملاحظات', 80)}</p>
+            <div class="medication-actions">
+                <button class="btn btn-primary" onclick="openMedicationModal('${med.id}')">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="btn btn-danger" onclick="deleteMedication('${med.id}')">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+            </div>
+        `;
+        medicationsListDiv.appendChild(card);
+    });
+}
+
+// حذف دواء
+async function deleteMedication(medicationId) {
+    if (confirm('هل أنت متأكد من حذف هذا الدواء؟')) {
+        try {
+            const { error } = await supabase
+                .from('medications')
+                .delete()
+                .eq('id', medicationId);
+
+            if (error) {
+                console.error('خطأ في حذف الدواء:', error);
+                throw error;
+            }
+            
+            showAlert('تم حذف الدواء بنجاح!', 'success');
+            await loadMedicationsFromSupabase();
+        } catch (error) {
+            console.error('خطأ في حذف الدواء:', error);
+            showAlert('خطأ في حذف الدواء - تحقق من إعدادات CORS', 'error');
+        }
+    }
+}
+
+// تحديث قائمة الأدوية في نموذج المريض
+function updateMedicationSelect() {
+    const select = document.getElementById('treatment-medication');
+    select.innerHTML = '<option value="">اختر دواء</option>';
+    
+    medications.forEach(medication => {
+        const option = document.createElement('option');
+        option.value = medication.name;
+        option.textContent = medication.name;
+        select.appendChild(option);
+    });
+}
+
+// الحصول على تسمية نوع الدواء
+function getMedicationTypeLabel(type) {
+    const types = {
+        'Drops': 'قطرة',
+        'Ointment': 'مرهم',
+        'Tablet': 'أقراص',
+        'Capsule': 'كبسولة',
+        'Injection': 'حقن',
+        'Other': 'أخرى'
+    };
+    return types[type] || type;
+}
+
+// ============================================================================
+// وظائف مساعدة
+// ============================================================================
 
 // عرض رسالة تنبيه
 function showAlert(message, type) {
@@ -343,6 +608,8 @@ function switchTab(tabName) {
 
     if (tabName === 'patients-list') {
         updatePatientsTable();
+    } else if (tabName === 'medications') {
+        renderMedications();
     }
 }
 
@@ -362,7 +629,7 @@ function updatePatientsTable() {
         `;
         return;
     }
-    
+
     patients.forEach((patient, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -375,7 +642,7 @@ function updatePatientsTable() {
                 <div class="vision-summary">
                     <span class="eye-label">V.A:</span> ${patient.right_eye_va || 'غير محدد'}<br>
                     <span class="eye-label">IOP:</span> ${patient.right_eye_iop || 'غير محدد'} mmHg
-            </div>
+                </div>
             </td>
             <td>
                 <div class="vision-summary">
@@ -388,30 +655,17 @@ function updatePatientsTable() {
                 <div class="action-buttons">
                     <button class="action-btn view-btn" onclick="viewPatient('${patient.id}')" title="عرض التفاصيل">
                         <i class="fas fa-eye"></i>
-                </button>
+                    </button>
                     <button class="action-btn edit-btn" onclick="editPatient('${patient.id}')" title="تعديل">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="action-btn delete-btn" onclick="deletePatientHandler('${patient.id}')" title="حذف">
                         <i class="fas fa-trash"></i>
-                </button>
-            </div>
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(row);
-    });
-}
-
-// تحديث قائمة الأدوية في النموذج
-function updateMedicationSelect() {
-    const select = document.getElementById('treatment-medication');
-    select.innerHTML = '<option value="">Select Medication</option>';
-    
-    medications.forEach(medication => {
-        const option = document.createElement('option');
-        option.value = medication.name;
-        option.textContent = medication.name;
-        select.appendChild(option);
     });
 }
 
@@ -422,6 +676,7 @@ function formatDate(dateString) {
 }
 
 function truncateText(text, maxLength) {
+    if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
 }
@@ -438,7 +693,10 @@ function debounce(func, wait) {
     };
 }
 
+// ============================================================================
 // دوال للاستخدام في HTML
+// ============================================================================
+
 window.viewPatient = viewPatient;
 window.editPatient = editPatient;
 window.deletePatientHandler = deletePatientHandler;
@@ -447,7 +705,7 @@ window.showAlert = showAlert;
 window.openMedicationModal = openMedicationModal;
 window.closeMedicationModal = closeMedicationModal;
 window.saveMedication = saveMedication;
-window.deleteMedicationHandler = deleteMedicationHandler;
+window.deleteMedication = deleteMedication;
 window.refreshData = loadPatientsFromSupabase;
 window.exportAllData = exportPatients;
 
@@ -458,23 +716,6 @@ function viewPatient(patientId) {
 
 function editPatient(patientId) {
     showAlert('ميزة تعديل المريض قيد التطوير', 'info');
-}
-
-function openMedicationModal() {
-    document.getElementById('medication-modal').style.display = 'block';
-}
-
-function closeMedicationModal() {
-    document.getElementById('medication-modal').style.display = 'none';
-    document.getElementById('medication-form').reset();
-}
-
-function saveMedication() {
-    showAlert('ميزة حفظ الدواء قيد التطوير', 'info');
-}
-
-function deleteMedicationHandler(medicationId) {
-    showAlert('ميزة حذف الدواء قيد التطوير', 'info');
 }
 
 function exportPatients() {
@@ -555,7 +796,7 @@ function displaySearchResults(results) {
                 <div class="patient-card-header">
                     <h4>${patient.name}</h4>
                     <span class="patient-id">${patient.patient_id}</span>
-                   </div>
+                </div>
                 <div class="patient-card-body">
                     <p><strong>العمر:</strong> ${patient.age} سنة</p>
                     <p><strong>الجنس:</strong> ${patient.gender === 'male' ? 'ذكر' : 'أنثى'}</p>
@@ -564,12 +805,12 @@ function displaySearchResults(results) {
                         <div class="eye-data">
                             <span><strong>العين اليمنى:</strong></span>
                             <span>${patient.right_eye_va || 'غير محدد'}</span>
-               </div>
+                        </div>
                         <div class="eye-data">
                             <span><strong>العين اليسرى:</strong></span>
                             <span>${patient.left_eye_va || 'غير محدد'}</span>
-                </div>
-                </div>
+                        </div>
+                    </div>
                     <p><strong>التشخيص:</strong> ${truncateText(patient.diagnosis, 50)}</p>
                 </div>
                 <div class="patient-card-actions">
@@ -598,4 +839,11 @@ function calculateTotal() {
     const discount = parseFloat(document.getElementById('discount').value) || 0;
     const total = examinationCost - discount;
     document.getElementById('total-cost').value = total.toFixed(2);
+}
+
+function handleFormReset() {
+    generatePatientId();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('visit-date').value = today;
+    calculateTotal();
 }
