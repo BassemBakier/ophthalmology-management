@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ophthalmology Patient Management System - Supabase</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1><i class="fas fa-eye"></i> Ophthalmology Patient Management System</h1>
+                    <p>Specialized application for recording and tracking patient cases - Powered by Supabase</p>
+                </div>
+                <div class="connection-status">
+                    <span id="connection-status" class="status-indicator">
+                        <i class="fas fa-circle"></i> Connecting...
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="add-patient">
+                <i class="fas fa-user-plus"></i> Add New Patient
+            </button>
+            <button class="tab-btn" data-tab="patients-list">
+                <i class="fas fa-list"></i> Patients List
+            </button>
+            <button class="tab-btn" data-tab="search">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="tab-btn" data-tab="patient-history">
+                <i class="fas fa-history"></i> Patient History
+            </button>
+            <button class="tab-btn" data-tab="medications">
+                <i class="fas fa-pills"></i> Medications Management
+            </button>
+            <button class="tab-btn" data-tab="backup">
+                <i class="fas fa-database"></i> Backup & Restore
+            </button>
+            <button class="tab-btn" data-tab="financial">
+                <i class="fas fa-chart-line"></i> Financial Reports
+            </button>
+        </nav>
+
+        <!-- Add New Patient -->
+        <div id="add-patient" class="tab-content active">
+            <div class="form-container">
+                <h2><i class="fas fa-user-plus"></i> Patient Information</h2>
+                <form id="patient-form" class="patient-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patient-name">Full Name *</label>
+                            <input type="text" id="patient-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="patient-age">Age *</label>
+                            <input type="number" id="patient-age" name="age" required min="0" max="120">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patient-phone">Phone Number *</label>
+                            <input type="tel" id="patient-phone" name="phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="patient-gender">Gender *</label>
+                            <select id="patient-gender" name="gender" required>
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="visit-date">Visit Date *</label>
+                            <input type="date" id="visit-date" name="visitDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="patient-id">Patient ID</label>
+                            <input type="text" id="patient-id" name="patientId" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Complain -->
+                    <div class="form-group">
+                        <label for="complain">Complain *</label>
+                        <textarea id="complain" name="complain" rows="3" required placeholder="Describe patient complaint"></textarea>
+                    </div>
+
+                    <!-- EX Table -->
+                    <div class="vision-section">
+                        <h3><i class="fas fa-eye"></i> EX Table</h3>
+                        <div class="ex-table-container">
+                            <table class="ex-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Right Eye</th>
+                                        <th>Left Eye</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="ex-label">V.A</td>
+                                        <td><input type="text" name="rightVA" placeholder="6/6"></td>
+                                        <td><input type="text" name="leftVA" placeholder="6/6"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">BCVA</td>
+                                        <td><input type="text" name="rightBCVA" placeholder="6/6"></td>
+                                        <td><input type="text" name="leftBCVA" placeholder="6/6"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">COMEA</td>
+                                        <td><input type="text" name="rightCOMEA" placeholder="Clear"></td>
+                                        <td><input type="text" name="leftCOMEA" placeholder="Clear"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">LID</td>
+                                        <td><input type="text" name="rightLID" placeholder="Normal"></td>
+                                        <td><input type="text" name="leftLID" placeholder="Normal"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">LENS</td>
+                                        <td><input type="text" name="rightLENS" placeholder="Clear"></td>
+                                        <td><input type="text" name="leftLENS" placeholder="Clear"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">IOP</td>
+                                        <td><input type="number" name="rightIOP" placeholder="14" step="0.1"></td>
+                                        <td><input type="number" name="leftIOP" placeholder="14" step="0.1"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ex-label">FUNDUS</td>
+                                        <td><input type="text" name="rightFUNDUS" placeholder="Normal"></td>
+                                        <td><input type="text" name="leftFUNDUS" placeholder="Normal"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Refraction Table -->
+                    <div class="vision-section">
+                        <h3><i class="fas fa-eye"></i> Refraction Table</h3>
+                        <div class="refraction-table-container">
+                            <table class="refraction-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th colspan="3">Right</th>
+                                        <th colspan="2">IPA</th>
+                                        <th colspan="3">Left</th>
+                                    </tr>
+                                    <tr>
+                                        <th></th>
+                                        <th>Sph</th>
+                                        <th>Cyl</th>
+                                        <th>Axis</th>
+                                        <th></th>
+                                        <th></th>
+                                        <th>Sph</th>
+                                        <th>Cyl</th>
+                                        <th>Axis</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="refraction-label">Dist:</td>
+                                        <td><input type="text" name="rightDistSph" placeholder="0.00"></td>
+                                        <td><input type="text" name="rightDistCyl" placeholder="0.00"></td>
+                                        <td><input type="text" name="rightDistAxis" placeholder="0"></td>
+                                        <td><input type="text" name="ipaDist" placeholder="0.00"></td>
+                                        <td><input type="text" name="ipaDist2" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftDistSph" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftDistCyl" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftDistAxis" placeholder="0"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="refraction-label">Read:</td>
+                                        <td><input type="text" name="rightReadSph" placeholder="0.00"></td>
+                                        <td><input type="text" name="rightReadCyl" placeholder="0.00"></td>
+                                        <td><input type="text" name="rightReadAxis" placeholder="0"></td>
+                                        <td><input type="text" name="ipaRead" placeholder="0.00"></td>
+                                        <td><input type="text" name="ipaRead2" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftReadSph" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftReadCyl" placeholder="0.00"></td>
+                                        <td><input type="text" name="leftReadAxis" placeholder="0"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Treatment Section -->
+                    <div class="vision-section">
+                        <h3><i class="fas fa-pills"></i> Treatment</h3>
+                        <div class="treatment-container">
+                            <div class="treatment-inputs">
+                                <div class="form-group">
+                                    <label for="treatment-medication">Medication</label>
+                                    <div class="medication-select-container">
+                                        <select id="treatment-medication" name="treatmentMedication" class="medication-select">
+                                            <option value="">Select Medication</option>
+                                        </select>
+                                        <button type="button" class="btn btn-outline add-medication-btn" onclick="openMedicationModal()">
+                                            <i class="fas fa-plus"></i> Add New Medication
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="treatment-dosage">Dosage</label>
+                                    <input type="text" id="treatment-dosage" name="treatmentDosage" placeholder="e.g., 1 tablet in the morning">
+                                </div>
+                                <div class="form-group">
+                                    <label for="treatment-duration">Treatment Duration</label>
+                                    <input type="text" id="treatment-duration" name="treatmentDuration" placeholder="e.g., 7 days">
+                                </div>
+                                <div class="form-group">
+                                    <label for="treatment-instructions">Special Instructions</label>
+                                    <textarea id="treatment-instructions" name="treatmentInstructions" rows="2" placeholder="Special instructions for medication"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Diagnosis -->
+                    <div class="form-group">
+                        <label for="diagnosis">Detailed Diagnosis *</label>
+                        <textarea id="diagnosis" name="diagnosis" rows="3" required placeholder="Detailed medical diagnosis of the case"></textarea>
+                    </div>
+
+                    <!-- Operation -->
+                    <div class="form-group">
+                        <label for="operation">Operation</label>
+                        <textarea id="operation" name="operation" rows="3" placeholder="Surgical procedure or operation details"></textarea>
+                    </div>
+
+                    <!-- Cost Section -->
+                    <div class="vision-section">
+                        <h3><i class="fas fa-coins"></i> Cost Information</h3>
+                        <div class="cost-grid">
+                            <div class="form-group">
+                                <label for="examination-cost">Examination Cost (EGP) *</label>
+                                <input type="number" id="examination-cost" name="examinationCost" required min="0" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="discount">Discount Amount (EGP)</label>
+                                <input type="number" id="discount" name="discount" min="0" step="0.01" placeholder="0.00" oninput="calculateTotal()">
+                            </div>
+                            <div class="form-group">
+                                <label for="total-cost">Total Cost (EGP)</label>
+                                <input type="number" id="total-cost" name="totalCost" readonly placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Additional Notes</label>
+                        <textarea id="notes" name="notes" rows="2" placeholder="Any additional notes"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Data
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Patients List -->
+        <div id="patients-list" class="tab-content">
+            <div class="list-container">
+                <div class="list-header">
+                    <h2><i class="fas fa-list"></i> Patients List</h2>
+                    <div class="list-controls">
+                        <button id="export-btn" class="btn btn-outline">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                        <button id="clear-all-btn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Clear All
+                        </button>
+                    </div>
+                </div>
+                <div id="patients-table-container">
+                    <table id="patients-table" class="patients-table">
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Visit Date</th>
+                                <th>Right Eye</th>
+                                <th>Left Eye</th>
+                                <th>Diagnosis</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patients-tbody">
+                            <!-- Data will be added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div id="search" class="tab-content">
+            <div class="search-container">
+                <h2><i class="fas fa-search"></i> Search Patients</h2>
+                <div class="search-form">
+                    <div class="search-inputs">
+                        <input type="text" id="search-name" placeholder="Search by name">
+                        <input type="text" id="search-diagnosis" placeholder="Search by diagnosis">
+                        <input type="date" id="search-date">
+                        <button id="search-btn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <button id="clear-search-btn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div id="search-results" class="search-results">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient History -->
+        <div id="patient-history" class="tab-content">
+            <div class="history-container">
+                <h2><i class="fas fa-history"></i> Patient History</h2>
+                <div class="history-search">
+                    <input type="text" id="history-search-name" placeholder="Search patient by name">
+                    <button id="history-search-btn" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                <div id="history-results" class="history-results">
+                    <!-- Patient history will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Medications Management -->
+        <div id="medications" class="tab-content">
+            <div class="medications-container">
+                <div class="medications-header">
+                    <h2><i class="fas fa-pills"></i> Medications Management</h2>
+                    <button class="btn btn-primary" onclick="openMedicationModal()">
+                        <i class="fas fa-plus"></i> Add New Medication
+                    </button>
+                </div>
+                <div class="medications-list" id="medications-list">
+                    <!-- Medications list will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup & Restore -->
+        <div id="backup" class="tab-content">
+            <div class="backup-container">
+                <h2><i class="fas fa-database"></i> Database Management</h2>
+                
+                <!-- Database Info Section -->
+                <div class="backup-section">
+                    <h3><i class="fas fa-info-circle"></i> Database Information</h3>
+                    <p>Your data is automatically backed up and synced with Supabase cloud database.</p>
+                    <div class="backup-actions">
+                        <button class="btn btn-primary" onclick="refreshData()">
+                            <i class="fas fa-sync"></i> Refresh Data
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportAllData()">
+                            <i class="fas fa-download"></i> Export All Data
+                        </button>
+                    </div>
+                    <div id="backup-info" class="backup-info">
+                        <!-- Database information will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- Data Statistics -->
+                <div class="stats-section">
+                    <h3><i class="fas fa-chart-bar"></i> Data Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4 id="total-patients">0</h4>
+                                <p>Total Patients</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4 id="total-visits">0</h4>
+                                <p>Total Visits</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-pills"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4 id="total-medications">0</h4>
+                                <p>Medications</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4 id="data-size">Supabase</h4>
+                                <p>Database</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Reports -->
+        <div id="financial" class="tab-content">
+            <div class="financial-container">
+                <h2><i class="fas fa-chart-line"></i> Financial Reports</h2>
+                
+                <!-- Date Range Selection -->
+                <div class="date-range-section">
+                    <h3><i class="fas fa-calendar-alt"></i> Select Date Range</h3>
+                    <div class="date-range-controls">
+                        <div class="date-input-group">
+                            <label for="start-date">From Date:</label>
+                            <input type="date" id="start-date" onchange="updateFinancialReport()">
+                        </div>
+                        <div class="date-input-group">
+                            <label for="end-date">To Date:</label>
+                            <input type="date" id="end-date" onchange="updateFinancialReport()">
+                        </div>
+                        <div class="date-input-group">
+                            <button class="btn btn-primary" onclick="updateFinancialReport()">
+                                <i class="fas fa-search"></i> Update Report
+                            </button>
+                        </div>
+                        <div class="date-input-group">
+                            <button class="btn btn-secondary" onclick="setToday()">
+                                <i class="fas fa-calendar-day"></i> Today
+                            </button>
+                        </div>
+                        <div class="date-input-group">
+                            <button class="btn btn-secondary" onclick="setThisMonth()">
+                                <i class="fas fa-calendar"></i> This Month
+                            </button>
+                        </div>
+                        <div class="date-input-group">
+                            <button class="btn btn-secondary" onclick="setAllTime()">
+                                <i class="fas fa-infinity"></i> All Time
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Summary -->
+                <div class="financial-summary">
+                    <h3><i class="fas fa-coins"></i> Financial Summary</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card total-revenue">
+                            <div class="summary-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="total-revenue">0 EGP</h4>
+                                <p>Total Revenue</p>
+                            </div>
+                        </div>
+                        <div class="summary-card total-examinations">
+                            <div class="summary-icon">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="total-examinations">0</h4>
+                                <p>Total Examinations</p>
+                            </div>
+                        </div>
+                        <div class="summary-card average-cost">
+                            <div class="summary-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="average-cost">0 EGP</h4>
+                                <p>Average Cost</p>
+                            </div>
+                        </div>
+                        <div class="summary-card total-discounts">
+                            <div class="summary-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="total-discounts">0 EGP</h4>
+                                <p>Total Discounts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Financial Report -->
+                <div class="detailed-report">
+                    <h3><i class="fas fa-list-alt"></i> Detailed Report</h3>
+                    <div class="report-controls">
+                        <button class="btn btn-success" onclick="exportFinancialReport()">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </button>
+                        <button class="btn btn-info" onclick="printFinancialReport()">
+                            <i class="fas fa-print"></i> Print Report
+                        </button>
+                    </div>
+                    <div id="financial-table-container" class="table-container">
+                        <!-- Financial table will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Add/Edit Medication Modal -->
+    <div id="medication-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="medication-modal-title">Add New Medication</h3>
+                <span class="close" onclick="closeMedicationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="medication-form">
+                    <div class="form-group">
+                        <label for="medication-name">Medication Name *</label>
+                        <input type="text" id="medication-name" name="medicationName" required placeholder="e.g., Eye Drops">
+                    </div>
+                    <div class="form-group">
+                        <label for="medication-type">Medication Type</label>
+                        <select id="medication-type" name="medicationType">
+                            <option value="Drops">Drops</option>
+                            <option value="Ointment">Ointment</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Capsule">Capsule</option>
+                            <option value="Injection">Injection</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="medication-description">Description</label>
+                        <textarea id="medication-description" name="medicationDescription" rows="3" placeholder="Brief description of the medication"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="medication-notes">Notes</label>
+                        <textarea id="medication-notes" name="medicationNotes" rows="2" placeholder="Additional notes"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveMedication()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+                <button class="btn btn-secondary" onclick="closeMedicationModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Details Modal -->
+    <div id="patient-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Patient Details</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body" id="patient-details">
+                <!-- Patient details will appear here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="printPatientDetails()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script-supabase.js"></script>
+</body>
+</html>
