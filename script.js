@@ -131,6 +131,17 @@ function setupEventListeners() {
     document.getElementById('search-name').addEventListener('input', debounce(searchPatientsHandler, 300));
     document.getElementById('search-diagnosis').addEventListener('input', debounce(searchPatientsHandler, 300));
     document.getElementById('search-date').addEventListener('change', searchPatientsHandler);
+
+    // إضافة مستمعي أحداث لحساب التكلفة الإجمالية
+    const examinationCostInput = document.getElementById('examination-cost');
+    const discountInput = document.getElementById('discount');
+    
+    if (examinationCostInput) {
+        examinationCostInput.addEventListener('input', calculateTotal);
+    }
+    if (discountInput) {
+        discountInput.addEventListener('input', calculateTotal);
+    }
 }
 
 // ============================================================================
@@ -417,10 +428,10 @@ async function handleMedicationSubmit(e) {
     
     const formData = new FormData(e.target);
     const medicationData = {
-        name: formData.get('name').trim(),
-        type: formData.get('type'),
-        description: formData.get('description').trim(),
-        notes: formData.get('notes').trim()
+        name: formData.get('name') ? formData.get('name').trim() : '',
+        type: formData.get('type') || '',
+        description: formData.get('description') ? formData.get('description').trim() : '',
+        notes: formData.get('notes') ? formData.get('notes').trim() : ''
     };
 
     // التحقق من صحة البيانات
@@ -704,8 +715,19 @@ window.switchTab = switchTab;
 window.showAlert = showAlert;
 window.openMedicationModal = openMedicationModal;
 window.closeMedicationModal = closeMedicationModal;
+// دالة saveMedication للاستخدام في HTML
+function saveMedication() {
+    // هذا سيتم استدعاؤه من خلال النموذج
+    const form = document.getElementById('medication-form');
+    if (form) {
+        const event = { preventDefault: () => {}, target: form };
+        handleMedicationSubmit(event);
+    }
+}
+
 window.saveMedication = saveMedication;
 window.deleteMedication = deleteMedication;
+window.calculateTotal = calculateTotal;
 window.refreshData = loadPatientsFromSupabase;
 window.exportAllData = exportPatients;
 
@@ -846,4 +868,15 @@ function handleFormReset() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('visit-date').value = today;
     calculateTotal();
+}
+
+// حساب التكلفة الإجمالية
+function calculateTotal() {
+    const examinationCost = parseFloat(document.getElementById('examination-cost')?.value) || 0;
+    const discount = parseFloat(document.getElementById('discount')?.value) || 0;
+    const total = examinationCost - discount;
+    const totalCostElement = document.getElementById('total-cost');
+    if (totalCostElement) {
+        totalCostElement.value = total.toFixed(2);
+    }
 }
