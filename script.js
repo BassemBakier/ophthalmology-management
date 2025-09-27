@@ -5,7 +5,7 @@
 const SUPABASE_URL = 'https://ogjpsyoewaoghppmuhcd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nanBzeW9ld2FvZ2hwcG11aGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5OTE2ODcsImV4cCI6MjA3NDU2NzY4N30.UdF6Mluzkf01XfhnvGp0Gec3VwGP8HZAukMNjka61jw';
 
-// إنشاء عميل Supabase مع إعدادات محسنة
+// إنشاء عميل Supabase مع إعدادات محسنة للاتصال من أي جهاز
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
         autoRefreshToken: true,
@@ -15,7 +15,18 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     global: {
         headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+    },
+    db: {
+        schema: 'public'
+    },
+    realtime: {
+        params: {
+            eventsPerSecond: 10
         }
     }
 });
@@ -35,17 +46,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 // تهيئة التطبيق
 async function initializeApp() {
     try {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('visit-date').value = today;
-        
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('visit-date').value = today;
+    
         updateConnectionStatus('connecting');
+        
+        // عرض معلومات الاتصال للمطور
+        logConnectionInfo();
         
         // اختبار الاتصال أولاً
         await testConnection();
         
         await loadPatientsFromSupabase();
         await loadMedicationsFromSupabase();
-        updatePatientsTable();
+    updatePatientsTable();
         renderMedications();
         updateConnectionStatus('connected');
         showAlert('تم تحميل البيانات بنجاح!', 'success');
@@ -53,25 +67,84 @@ async function initializeApp() {
         console.error('خطأ في تهيئة التطبيق:', error);
         updateConnectionStatus('error');
         showAlert('خطأ في الاتصال بقاعدة البيانات - تحقق من إعدادات CORS', 'error');
+        
+        // عرض نصائح لحل المشكلة
+        showConnectionTroubleshooting();
     }
 }
 
-// اختبار الاتصال
+// عرض معلومات الاتصال
+function logConnectionInfo() {
+    console.log('🔗 معلومات الاتصال:');
+    console.log('📍 Supabase URL:', SUPABASE_URL);
+    console.log('🔑 API Key:', SUPABASE_KEY.substring(0, 20) + '...');
+    console.log('🌐 Current Origin:', window.location.origin);
+    console.log('📱 User Agent:', navigator.userAgent);
+}
+
+// عرض نصائح حل المشاكل
+function showConnectionTroubleshooting() {
+    console.log('🔧 نصائح لحل مشاكل الاتصال:');
+    console.log('1. اذهب إلى Supabase > Settings > API');
+    console.log('2. أضف هذه النطاقات في CORS Origins:');
+    console.log('   - https://bassembakier.github.io');
+    console.log('   - https://bassembakier.github.io/*');
+    console.log('   - * (للتطوير فقط)');
+    console.log('3. احفظ التغييرات وانتظر دقيقة');
+    console.log('4. أعد تحميل الصفحة');
+}
+
+// اختبار الاتصال مع معلومات مفصلة
 async function testConnection() {
     try {
+        console.log('🔄 جاري اختبار الاتصال بقاعدة البيانات...');
+        console.log('📍 URL:', SUPABASE_URL);
+        console.log('🌐 Origin:', window.location.origin);
+        console.log('📱 User Agent:', navigator.userAgent);
+        
+        // اختبار الاتصال الأساسي
         const { data, error } = await supabase
             .from('patients')
             .select('count', { count: 'exact', head: true });
         
         if (error) {
-            console.error('خطأ في الاتصال:', error);
-            throw error;
+            console.error('❌ خطأ في الاتصال:', error);
+            console.error('📋 تفاصيل الخطأ:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+            });
+            
+            // محاولة اختبار أبسط
+            try {
+                const { data: simpleTest, error: simpleError } = await supabase
+                    .from('medications')
+                    .select('id')
+                    .limit(1);
+                
+                if (simpleError) {
+                    throw simpleError;
+                }
+                
+                console.log('✅ تم الاتصال بقاعدة البيانات بنجاح (اختبار مبسط)');
+                return true;
+            } catch (simpleError) {
+                console.error('❌ فشل في الاختبار المبسط:', simpleError);
+                throw simpleError;
+            }
         }
         
         console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
+        console.log('📊 عدد المرضى:', data?.[0]?.count || 0);
         return true;
     } catch (error) {
         console.error('❌ فشل في الاتصال:', error);
+        console.error('💡 نصائح لحل المشكلة:');
+        console.error('1. تحقق من إعدادات CORS في Supabase');
+        console.error('2. تأكد من صحة URL والـ API Key');
+        console.error('3. تحقق من اتصال الإنترنت');
+        console.error('4. تأكد من أن المشروع نشط في Supabase');
         throw error;
     }
 }
@@ -253,7 +326,7 @@ async function handlePatientSubmit(e) {
         operation: formData.get('operation'),
         
         examination_cost: parseFloat(formData.get('examinationCost')) || 0,
-        discount: parseFloat(formData.get('discount')) || 0,
+            discount: parseFloat(formData.get('discount')) || 0,
         notes: formData.get('notes')
     };
 
@@ -274,14 +347,14 @@ async function handlePatientSubmit(e) {
         
         showAlert('تم حفظ بيانات المريض بنجاح!', 'success');
         
-        e.target.reset();
+    e.target.reset();
         currentPatientId++;
-        generatePatientId();
-        
+    generatePatientId();
+    
         await loadPatientsFromSupabase();
         updatePatientsTable();
         
-        switchTab('patients-list');
+    switchTab('patients-list');
     } catch (error) {
         console.error('خطأ في حفظ المريض:', error);
         showAlert('خطأ في حفظ بيانات المريض - تحقق من إعدادات CORS', 'error');
@@ -507,7 +580,7 @@ function renderMedications() {
         `;
         return;
     }
-
+    
     medications.forEach(med => {
         const card = document.createElement('div');
         card.className = 'medication-card';
@@ -515,7 +588,7 @@ function renderMedications() {
             <div class="medication-card-header">
                 <h4 class="medication-name">${med.name}</h4>
                 <span class="medication-type">${getMedicationTypeLabel(med.type)}</span>
-            </div>
+        </div>
             <p class="medication-description">${truncateText(med.description || 'لا يوجد وصف', 100)}</p>
             <p class="medication-notes">${truncateText(med.notes || 'لا توجد ملاحظات', 80)}</p>
             <div class="medication-actions">
@@ -524,7 +597,7 @@ function renderMedications() {
                 </button>
                 <button class="btn btn-danger" onclick="deleteMedication('${med.id}')">
                     <i class="fas fa-trash"></i> حذف
-                </button>
+                    </button>
             </div>
         `;
         medicationsListDiv.appendChild(card);
@@ -636,11 +709,11 @@ function updatePatientsTable() {
                     <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
                     لا توجد بيانات مرضى
                 </td>
-            </tr>
+                            </tr>
         `;
         return;
     }
-
+    
     patients.forEach((patient, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -665,15 +738,15 @@ function updatePatientsTable() {
             <td>
                 <div class="action-buttons">
                     <button class="action-btn view-btn" onclick="viewPatient('${patient.id}')" title="عرض التفاصيل">
-                        <i class="fas fa-eye"></i>
-                    </button>
+                                <i class="fas fa-eye"></i>
+                            </button>
                     <button class="action-btn edit-btn" onclick="editPatient('${patient.id}')" title="تعديل">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                                <i class="fas fa-edit"></i>
+                            </button>
                     <button class="action-btn delete-btn" onclick="deletePatientHandler('${patient.id}')" title="حذف">
                         <i class="fas fa-trash"></i>
                     </button>
-                </div>
+                        </div>
             </td>
         `;
         tbody.appendChild(row);
@@ -818,7 +891,7 @@ function displaySearchResults(results) {
                 <div class="patient-card-header">
                     <h4>${patient.name}</h4>
                     <span class="patient-id">${patient.patient_id}</span>
-                </div>
+                   </div>
                 <div class="patient-card-body">
                     <p><strong>العمر:</strong> ${patient.age} سنة</p>
                     <p><strong>الجنس:</strong> ${patient.gender === 'male' ? 'ذكر' : 'أنثى'}</p>
@@ -827,12 +900,12 @@ function displaySearchResults(results) {
                         <div class="eye-data">
                             <span><strong>العين اليمنى:</strong></span>
                             <span>${patient.right_eye_va || 'غير محدد'}</span>
-                        </div>
+               </div>
                         <div class="eye-data">
                             <span><strong>العين اليسرى:</strong></span>
                             <span>${patient.left_eye_va || 'غير محدد'}</span>
-                        </div>
-                    </div>
+                </div>
+                </div>
                     <p><strong>التشخيص:</strong> ${truncateText(patient.diagnosis, 50)}</p>
                 </div>
                 <div class="patient-card-actions">
